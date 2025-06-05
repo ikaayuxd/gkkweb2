@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Order History - Gumasta Krishi Kendra</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet" />
+  <style>
+    body {
+      background: linear-gradient(135deg, #1e3a8a, #3b82f6, #10b981, #f59e0b);
+      background-size: 400% 400%;
+      animation: gradientBG 15s ease infinite;
+      min-height: 100vh;
+      padding: 1rem;
+    }
+    @keyframes gradientBG {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    .white-border {
+      border: 2px solid white;
+      border-radius: 12px;
+    }
+    .order-card {
+      background-color: rgba(255, 255, 255, 0.9);
+      border-radius: 12px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      color: #000;
+    }
+    .order-header {
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+    }
+    .order-items {
+      margin-left: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="max-w-3xl mx-auto bg-transparent rounded-lg shadow-md overflow-hidden border border-gray-300 mb-4 white-border">
+    <div class="p-4 text-center">
+      <h1 class="text-2xl font-bold text-white">Order History - Gumasta Krishi Kendra</h1>
+      <a href="index.html" class="text-white underline mt-2 inline-block">Back to Home</a>
+    </div>
+    <div id="orders-container" class="p-4">
+      <p class="text-white text-center">Loading order history...</p>
+    </div>
+  </div>
+
+  <script>
+    async function fetchOrders() {
+      try {
+        const response = await fetch('http://localhost:5000/api/orders');
+        if (!response.ok) {
+          throw new Error('Failed to fetch orders');
+        }
+        const orders = await response.json();
+
+        const container = document.getElementById('orders-container');
+        container.innerHTML = '';
+
+        if (orders.length === 0) {
+          container.innerHTML = '<p class="text-white text-center">No orders found.</p>';
+          return;
+        }
+
+        orders.forEach(order => {
+          const orderDiv = document.createElement('div');
+          orderDiv.className = 'order-card';
+
+          const header = document.createElement('div');
+          header.className = 'order-header';
+          header.textContent = `Buyer: ${order.buyerName} | Date: ${order.orderDate}`;
+          orderDiv.appendChild(header);
+
+          const itemsDiv = document.createElement('div');
+          itemsDiv.className = 'order-items';
+
+          for (const [productName, details] of Object.entries(order.cart)) {
+            const item = document.createElement('div');
+            item.textContent = `${productName} - ${details.quantity} × ₹${details.price} = ₹${details.total}`;
+            itemsDiv.appendChild(item);
+          }
+          orderDiv.appendChild(itemsDiv);
+
+          const totalDiv = document.createElement('div');
+          totalDiv.className = 'mt-2 font-bold';
+          totalDiv.textContent = `Total: ₹${order.totalValue}`;
+          orderDiv.appendChild(totalDiv);
+
+          container.appendChild(orderDiv);
+        });
+      } catch (error) {
+        console.error("Failed to fetch orders:", error);
+        const container = document.getElementById('orders-container');
+        container.innerHTML = '<p class="text-white text-center">Failed to load order history. Please try again later.</p>';
+      }
+    }
+
+    fetchOrders();
+  </script>
+</body>
+</html>
