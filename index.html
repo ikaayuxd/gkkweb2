@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gumasta Krishi Kendra</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet" />
+  <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+  <style>
+    body {
+      background: linear-gradient(135deg, #1e3a8a, #3b82f6, #10b981, #f59e0b);
+      background-size: 400% 400%;
+      animation: gradientBG 15s ease infinite;
+    }
+
+    @keyframes gradientBG {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    .white-border {
+      border: 2px solid white;
+      border-radius: 12px;
+    }
+
+    .pattern-bg {
+      background: repeating-linear-gradient(
+        45deg,
+        #f3f4f6,
+        #f3f4f6 10px,
+        #e5e7eb 10px,
+        #e5e7eb 20px
+      );
+    }
+  </style>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const productContainer = document.getElementById('product-container');
+      const cartDetailsElement = document.getElementById('cart-details');
+      const cartValueElement = document.getElementById('cart-value');
+      const placeOrderButton = document.getElementById('place-order-button');
+      const clearCartButton = document.getElementById('clear-cart-button');
+      const menuButtons = document.querySelectorAll('.menu-button');
+      let cart = {};
+
+      menuButtons.forEach(button => {
+        button.addEventListener('click', function () {
+          const category = this.dataset.category;
+          loadProducts(category);
+        });
+      });
+
+      function loadProducts(category) {
+        fetch(`${category}.txt`)
+          .then(response => response.text())
+          .then(data => {
+            const products = data.split('\n').map(line => {
+              const [name, price] = line.split(',').map(item => item.trim());
+              if (name && price) {
+                return { name, price: parseFloat(price) };
+              }
+            }).filter(product => product);
+            productContainer.innerHTML = '';
+            products.forEach(product => {
+              addProductButton(product.name, product.price);
+            });
+          });
+      }
+
+      function addProductButton(name, price) {
+        const productButton = document.createElement('button');
+        productButton.className = 'product-button text-white font-semibold py-1 px-2 rounded-lg flex items-center justify-between border border-white bg-transparent';
+        productButton.dataset.name = name;
+        productButton.dataset.price = price;
+        productButton.innerHTML = `${name} - ₹${price}`;
+        productButton.addEventListener('click', function () {
+          const quantity = prompt('Enter quantity:');
+          if (quantity && !isNaN(quantity) && parseInt(quantity) > 0) {
+            cart[name] = {
+              price: price,
+              quantity: parseInt(quantity),
+              total: price * parseInt(quantity)
+            };
+            updateCart();
+          } else if (parseInt(quantity) === 0) {
+            delete cart[name];
+            updateCart();
+          }
+        });
+        productContainer.appendChild(productButton);
+      }
+
+      function updateCart() {
+        let cartDetailsHTML = '';
+        let totalValue = 0;
+        for (const [productName, productDetails] of Object.entries(cart)) {
+          cartDetailsHTML += `<div>${productName} - ${productDetails.quantity} × ₹${productDetails.price} = ₹${productDetails.total}</div>`;
+          totalValue += productDetails.total;
+        }
+        cartDetailsElement.innerHTML = cartDetailsHTML;
+        cartValueElement.textContent = `Total Cart Value: ₹${totalValue}`;
+      }
+
+      placeOrderButton.addEventListener('click', async function () {
+        const buyerName = prompt('Enter your name:');
+        if (!buyerName) return;
+
+        const now = new Date();
+        const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+        const orderDate = now.toLocaleDateString('en-IN', options);
+
+        const order = {
+          buyerName,
+          cart,
+          totalValue: Object.values(cart).reduce((sum, item) => sum + item.total, 0),
+          orderDate,
+        };
+
+        try {
+          const response = await fetch('http://localhost:5000/api/orders', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(order)
+          });
+          if (!response.ok) {
+            throw new Error('Failed to save order');
+          }
+          alert('Order saved successfully!');
+        } catch (error) {
+          console.error('Error saving order:', error);
+          alert('Failed to save order. See console for details.');
+        }
+
+        const cartBlockClone = document.createElement('div');
+        cartBlockClone.className = 'pattern-bg';
+        cartBlockClone.style.color = '#000000';
+        cartBlockClone.style.padding = '20px';
+        cartBlockClone.style.width = '300px';
+        cartBlockClone.style.border = '1px solid #000';
+
+        const titleElement = document.createElement('div');
+        titleElement.textContent = 'Gumasta Krishi Kendra';
+        titleElement.className = 'text-black text-center font-bold mb-4';
+
+        const buyerNameElement = document.createElement('div');
+        buyerNameElement.textContent = `Buyer: ${buyerName}`;
+        buyerNameElement.className = 'text-black mb-2';
+
+        const cartDetailsClone = cartDetailsElement.cloneNode(true);
+        cartDetailsClone.className = 'text-black';
+
+        const totalAmountElement = document.createElement('div');
+        totalAmountElement.innerHTML = `<strong>${cartValueElement.textContent}</strong>`;
+        totalAmountElement.className = 'text-black mt-2';
+
+        const dateTimeElement = document.createElement('div');
+        dateTimeElement.textContent = orderDate;
+        dateTimeElement.className = 'text-black mt-4';
+
+        cartBlockClone.appendChild(titleElement);
+        cartBlockClone.appendChild(buyerNameElement);
+        cartBlockClone.appendChild(cartDetailsClone);
+        cartBlockClone.appendChild(totalAmountElement);
+        cartBlockClone.appendChild(dateTimeElement);
+
+        document.body.appendChild(cartBlockClone);
+        html2canvas(cartBlockClone).then(canvas => {
+          const imgData = canvas.toDataURL('image/png');
+          const link = document.createElement('a');
+          link.href = imgData;
+          link.download = 'cart-details.png';
+          link.click();
+          document.body.removeChild(cartBlockClone);
+        });
+      });
+
+      clearCartButton.addEventListener('click', function () {
+        cart = {};
+        updateCart();
+      });
+
+      // Load default category (Seeds) on page load
+      loadProducts('Seeds');
+    });
+  </script>
+  <div class="text-center mt-4">
+    <a href="order-history.html" class="text-white underline">View Order History</a>
+  </div>
+</head>
+<body class="p-4">
+  <div class="max-w-md mx-auto bg-transparent rounded-lg shadow-md overflow-hidden border border-gray-300 mb-4">
+    <div class="p-4 text-center">
+      <h1 class="text-2xl font-bold text-white white-border p-2 inline-block">
+        GUMASTA KRISHI KENDRA
+      </h1>
+    </div>
+    <div class="p-4">
+      <div class="grid grid-cols-2 gap-2 mb-4">
+        <button class="menu-button text-white font-semibold py-2 px-4 rounded-lg border border-white bg-transparent" data-category="Seeds">Seeds</button>
+        <button class="menu-button text-white font-semibold py-2 px-4 rounded-lg border border-white bg-transparent" data-category="Fertilizers">Fertilizers</button>
+        <button class="menu-button text-white font-semibold py-2 px-4 rounded-lg border border-white bg-transparent" data-category="Herbicides">Herbicides</button>
+        <button class="menu-button text-white font-semibold py-2 px-4 rounded-lg border border-white bg-transparent" data-category="Pesticides">Pesticides</button>
+      </div>
+      <p class="text-lg font-semibold text-center text-white">
+        Select a product to order:
+      </p>
+      <div id="product-container" class="grid grid-cols-2 gap-2 mt-4">
+        <!-- Product buttons will be added here -->
+      </div>
+    </div>
+  </div>
+  <div class="max-w-md mx-auto bg-transparent rounded-lg shadow-md overflow-hidden border border-gray-300" id="cart-block">
+    <div class="p-4">
+      <p class="text-lg font-semibold text-center text-white">
+        Cart Details:
+      </p>
+      <div class="mt-4 text-center text-white font-semibold" id="cart-details">
+      </div>
+      <div class="mt-4 text-center text-white font-semibold" id="cart-value">
+        Total Cart Value: ₹0
+      </div>
+      <div class="mt-4 flex justify-between">
+        <button class="product-button text-white font-semibold py-1 px-2 rounded-lg flex items-center justify-between border border-white bg-transparent" id="clear-cart-button">
+          Clear Cart
+        </button>
+        <button class="product-button text-white font-semibold py-1 px-2 rounded-lg flex items-center justify-between border border-white bg-transparent" id="place-order-button">
+          Place Your Order
+        </button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
