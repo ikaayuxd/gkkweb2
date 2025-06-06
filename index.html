@@ -1,11 +1,10 @@
-<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gumasta Krishi Kendra</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet"/>
   <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
   <style>
     body {
@@ -56,12 +55,18 @@
         fetch(`${category}.txt`)
           .then(response => response.text())
           .then(data => {
-            const products = data.split('\n').map(line => {
-              const [name, price] = line.split(',').map(item => item.trim());
-              if (name && price) {
-                return { name, price: parseFloat(price) };
-              }
-            }).filter(product => product);
+            const products = data.split('\n')
+              .filter(line => line.trim())
+              .map(line => {
+                // Remove emojis and extra spaces, then split by comma
+                const cleanLine = line.replace(/[\u{1F300}-\u{1F9FF}]/gu, '').trim();
+                const [name, price] = cleanLine.split(',').map(item => item.trim());
+                if (name && price) {
+                  return { name, price: parseFloat(price) };
+                }
+              })
+              .filter(product => product);
+            
             productContainer.innerHTML = '';
             products.forEach(product => {
               addProductButton(product.name, product.price);
